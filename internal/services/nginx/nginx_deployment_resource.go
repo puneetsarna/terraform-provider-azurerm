@@ -657,7 +657,6 @@ func (m DeploymentResource) Read() sdk.ResourceFunc {
 							if prop.ProtectedFiles != nil {
 								for _, file := range *prop.ProtectedFiles {
 									protectedFiles = append(protectedFiles, ConfigureFile{
-										Content:     pointer.From(file.Content),
 										VirtualPath: pointer.From(file.VirtualPath),
 									})
 								}
@@ -809,9 +808,9 @@ func (m DeploymentResource) IDValidationFunc() pluginsdk.SchemaValidateFunc {
 	return nginxdeployment.ValidateNginxDeploymentID
 }
 
-func expandConfiguration(model Configuration) nginxconfiguration.NginxConfiguration {
-	result := nginxconfiguration.NginxConfiguration{
-		Properties: &nginxconfiguration.NginxConfigurationProperties{},
+func expandConfiguration(model Configuration) nginxconfiguration.NginxConfigurationRequest {
+	result := nginxconfiguration.NginxConfigurationRequest{
+		Properties: &nginxconfiguration.NginxConfigurationRequestProperties{},
 	}
 
 	if len(model.ConfigureFile) > 0 {
@@ -826,9 +825,9 @@ func expandConfiguration(model Configuration) nginxconfiguration.NginxConfigurat
 	}
 
 	if len(model.ProtectedFile) > 0 {
-		var files []nginxconfiguration.NginxConfigurationFile
+		var files []nginxconfiguration.NginxConfigurationProtectedFileRequest
 		for _, file := range model.ProtectedFile {
-			files = append(files, nginxconfiguration.NginxConfigurationFile{
+			files = append(files, nginxconfiguration.NginxConfigurationProtectedFileRequest{
 				Content:     pointer.To(file.Content),
 				VirtualPath: pointer.To(file.VirtualPath),
 			})

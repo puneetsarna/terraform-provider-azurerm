@@ -36,8 +36,8 @@ type ProtectedFile struct {
 	VirtualPath string `tfschema:"virtual_path"`
 }
 
-func (c ProtectedFile) toSDKModel() nginxconfiguration.NginxConfigurationFile {
-	return nginxconfiguration.NginxConfigurationFile{
+func (c ProtectedFile) toSDKModel() nginxconfiguration.NginxConfigurationProtectedFileRequest {
+	return nginxconfiguration.NginxConfigurationProtectedFileRequest{
 		Content:     pointer.FromString(c.Content),
 		VirtualPath: pointer.FromString(c.VirtualPath),
 	}
@@ -59,11 +59,11 @@ func (c ConfigurationModel) toSDKFiles() *[]nginxconfiguration.NginxConfiguratio
 	return &files
 }
 
-func (c ConfigurationModel) toSDKProtectedFiles() *[]nginxconfiguration.NginxConfigurationFile {
+func (c ConfigurationModel) toSDKProtectedFiles() *[]nginxconfiguration.NginxConfigurationProtectedFileRequest {
 	if len(c.ProtectedFile) == 0 {
 		return nil
 	}
-	var files []nginxconfiguration.NginxConfigurationFile
+	var files []nginxconfiguration.NginxConfigurationProtectedFileRequest
 	for _, file := range c.ProtectedFile {
 		files = append(files, file.toSDKModel())
 	}
@@ -71,10 +71,10 @@ func (c ConfigurationModel) toSDKProtectedFiles() *[]nginxconfiguration.NginxCon
 }
 
 // ToSDKModel used in both Create and Update
-func (c ConfigurationModel) ToSDKModel() nginxconfiguration.NginxConfiguration {
-	req := nginxconfiguration.NginxConfiguration{
+func (c ConfigurationModel) ToSDKModel() nginxconfiguration.NginxConfigurationRequest {
+	req := nginxconfiguration.NginxConfigurationRequest{
 		Name: pointer.FromString(defaultConfigurationName),
-		Properties: &nginxconfiguration.NginxConfigurationProperties{
+		Properties: &nginxconfiguration.NginxConfigurationRequestProperties{
 			RootFile: pointer.FromString(c.RootFile),
 		},
 	}
@@ -265,7 +265,6 @@ func (m ConfigurationResource) Read() sdk.ResourceFunc {
 				if files := prop.ProtectedFiles; files != nil {
 					for _, file := range *files {
 						output.ProtectedFile = append(output.ProtectedFile, ProtectedFile{
-							Content:     pointer.ToString(file.Content),
 							VirtualPath: pointer.ToString(file.VirtualPath),
 						})
 					}
@@ -301,7 +300,10 @@ func (m ConfigurationResource) Update() sdk.ResourceFunc {
 				return fmt.Errorf("retrieving as nil for %v", *id)
 			}
 
-			upd := existing.Model
+			upd := nginxconfiguration.NginxConfigurationRequest{
+				Name: pointer.FromString(defaultConfigurationName),
+			}
+
 			// root file is required in update
 			if meta.ResourceData.HasChange("root_file") {
 				upd.Properties.RootFile = pointer.FromString(model.RootFile)
@@ -320,7 +322,7 @@ func (m ConfigurationResource) Update() sdk.ResourceFunc {
 				}
 			}
 
-			if err := client.ConfigurationsCreateOrUpdateThenPoll(ctx, *id, *upd); err != nil {
+			if err := client.ConfigurationsCreateOrUpdateThenPoll(ctx, *id, upd); err != nil {
 				return fmt.Errorf("updating %s: %v", id, err)
 			}
 
